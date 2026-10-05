@@ -7,7 +7,37 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  useEffect(() => {
+    if (!query.trim()) {
+      setMedicines([]);
+      return;
+    }
 
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+
+    fetch(`https://api.fda.gov/drug/label.json?search=openfda.brand_name:"${encodeURIComponent(query)}"&limit=20`, {
+      signal: controller.signal
+    })
+      .then((res) => {
+        if (res.status === 404) return { results: [] };
+        if (!res.ok) throw new Error('Something went wrong');
+        return res.json();
+      })
+      .then((data) => {
+        setMedicines(data.results || []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          setError(err.message);
+          setLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [query]);
 
   // Detail View
   if (selected) {
